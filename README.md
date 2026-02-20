@@ -144,9 +144,43 @@ Enable WordPress debug logging:
 define('WP_DEBUG', true);
 define('WP_DEBUG_LOG', true);
 
-Logs will be written to:
+Logs will be written to: /wp-content/debug.log
 
-/wp-content/debug.log
+
 📈 Version
 
 Current Version: 0.1.0
+
+## Future Enhancements
+
+1. **Configurable State Dropdown**
+   - Select which U.S. states appear in the dropdown
+   - Restrict submissions to approved states only
+   - Manage state availability via plugin settings
+
+2. **CAPTCHA / Human Verification Integration**
+   - Native reCAPTCHA support (v2 or v3)
+   - Easy API key configuration
+   - Optional enable/disable toggle
+   - Spam protection
+
+3. **Multiple Named Forms**
+   - Create multiple forms within the same WordPress site
+   - Assign unique names
+   - Generate individual shortcodes
+
+4. **Admin Leads Dashboard**
+   - Centralized list of submitted leads
+   - Export to CSV
+   - Lead status tracking
+   - Search and filtering
+
+   ## Licensing & Usage
+
+This plugin integrates with third-party systems that may require
+separate authorization, API access, or licensing agreements.
+
+Distribution of this plugin does not grant access to external services.
+
+Users are responsible for ensuring compliance with any third-party
+platform terms of service.
