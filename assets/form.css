@@ -1,0 +1,129 @@
+/* 68502 Lead Capture - theme-first with minimal error styling */
+
+:root {
+  --ws68502-error: #b00020; /* subtle, professional red */
+}
+
+/* Layout only */
+.ws68502-form-wrap {
+  width: 100%;
+  max-width: 100%;
+}
+
+.ws68502-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+
+.ws68502-col-2 {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 680px) {
+  .ws68502-grid {
+    grid-template-columns: 1fr;
+  }
+  .ws68502-col-2 {
+    grid-column: auto;
+  }
+}
+
+/* Field spacing */
+.ws68502-field label {
+  display: block;
+  margin-bottom: 6px;
+  line-height: 1.25;
+}
+
+.ws68502-field input,
+.ws68502-field select,
+.ws68502-field textarea {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Error state outline */
+.ws68502-field input[aria-invalid="true"],
+.ws68502-field select[aria-invalid="true"],
+.ws68502-field textarea[aria-invalid="true"] {
+  outline: 2px solid var(--ws68502-error);
+  outline-offset: 2px;
+}
+
+/* Inline error message */
+.ws68502-error {
+  min-height: 1em;
+  margin-top: 6px;
+  font-size: 0.9em;
+  line-height: 1.2;
+  color: var(--ws68502-error);
+}
+
+/* Status message box */
+.ws68502-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.95em;
+  line-height: 1.25;
+  border: 1px solid currentColor;
+  opacity: 0.95;
+}
+
+/* Success vs error state */
+.ws68502-status[data-ok="1"] {
+  border-color: rgba(0, 128, 0, 0.35);
+}
+
+.ws68502-status[data-ok="0"]:not(:empty) {
+  border-color: var(--ws68502-error);
+}
+
+/* Just spacing for the button — theme handles look */
+.ws68502-submit {
+  margin-top: 14px;
+}
+
+/* Header section */
+.ws68502-header {
+  margin-bottom: 22px;
+}
+
+.ws68502-title {
+  margin: 0 0 6px 0;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.ws68502-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  opacity: 0.75;
+}
+
+/* Slight visual lift for form container */
+.ws68502-form {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 24px;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+}
+
+.ws68502-form-wrap select {
+  border: 1px solid #cfcfcf;
+  background-color: #ffffff;
+  border-radius: 4px;
+  height: 42px;
+  padding: 8px 12px;
+  appearance: none; /* optional: removes default OS styling */
+}
+
+/* Focus state */
+.ws68502-form-wrap select:focus {
+  border-color: #555;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+}
