@@ -1,0 +1,1 @@
+This is a plugin for Wordpress sites. You can download this and zip the folder. Then upload the plugin manually.  Go into the Setup and put in your tenant and API key and what you want to name that source.  The shortcode is in the settings. 
