@@ -2,18 +2,33 @@
 /**
  * Plugin Name: Applied Leads Inbox
  * Description: Theme-friendly Applied Leads Inbox form capture 
- * Version: 0.1.0
+ * Version: 0.2.0
  * Author: Jerry Smith
  */
 
 if (!defined('ABSPATH')) exit;
 
-define('WS68502_VERSION', '0.1.0');
+define('WS68502_VERSION', '0.2.0');
 define('WS68502_LEAD_ENDPOINT', 'https://skynet.semcat.net/v2/message');
 
 class WS68502_Lead_Capture {
   const OPTION_KEY = 'ws68502_lead_capture_settings';
   const NONCE_ACTION = 'ws68502_submit_lead';
+
+  private function us_states() {
+  return [
+    'AL'=>'Alabama','AK'=>'Alaska','AZ'=>'Arizona','AR'=>'Arkansas','CA'=>'California',
+    'CO'=>'Colorado','CT'=>'Connecticut','DE'=>'Delaware','FL'=>'Florida','GA'=>'Georgia',
+    'HI'=>'Hawaii','ID'=>'Idaho','IL'=>'Illinois','IN'=>'Indiana','IA'=>'Iowa',
+    'KS'=>'Kansas','KY'=>'Kentucky','LA'=>'Louisiana','ME'=>'Maine','MD'=>'Maryland',
+    'MA'=>'Massachusetts','MI'=>'Michigan','MN'=>'Minnesota','MS'=>'Mississippi','MO'=>'Missouri',
+    'MT'=>'Montana','NE'=>'Nebraska','NV'=>'Nevada','NH'=>'New Hampshire','NJ'=>'New Jersey',
+    'NM'=>'New Mexico','NY'=>'New York','NC'=>'North Carolina','ND'=>'North Dakota','OH'=>'Ohio',
+    'OK'=>'Oklahoma','OR'=>'Oregon','PA'=>'Pennsylvania','RI'=>'Rhode Island','SC'=>'South Carolina',
+    'SD'=>'South Dakota','TN'=>'Tennessee','TX'=>'Texas','UT'=>'Utah','VT'=>'Vermont',
+    'VA'=>'Virginia','WA'=>'Washington','WV'=>'West Virginia','WI'=>'Wisconsin','WY'=>'Wyoming'
+  ];
+}
 
   public function __construct() {
     // Admin settings
@@ -52,6 +67,8 @@ class WS68502_Lead_Capture {
         'tenant_id' => '',
         'api_key' => '',
         'source_name'  => 'Website',
+        'state_mode'    => 'all',      // 'all' or 'selected'
+        'states_allowed'=> [],         // array of state abbreviations
         
       ],
     ]);
@@ -60,8 +77,14 @@ class WS68502_Lead_Capture {
 public function sanitize_settings($input) {
   $out = [];
 
-  $out['tenant_id'] = isset($input['tenant_id']) ? sanitize_text_field($input['tenant_id']) : '';
-  $out['api_key']   = isset($input['api_key']) ? sanitize_text_field($input['api_key']) : '';
+  // Existing fields
+  $out['tenant_id'] = isset($input['tenant_id'])
+    ? sanitize_text_field($input['tenant_id'])
+    : '';
+
+  $out['api_key'] = isset($input['api_key'])
+    ? sanitize_text_field($input['api_key'])
+    : '';
 
   $out['source_name'] = isset($input['source_name'])
     ? substr(trim(sanitize_text_field($input['source_name'])), 0, 20)
@@ -70,6 +93,39 @@ public function sanitize_settings($input) {
   if (empty($out['source_name'])) {
     $out['source_name'] = 'Website';
   }
+
+  /* ----------------------------------------
+   * NEW: State Mode (all vs selected)
+   * ---------------------------------------- */
+
+  $mode = isset($input['state_mode'])
+    ? sanitize_text_field($input['state_mode'])
+    : 'all';
+
+  $out['state_mode'] = in_array($mode, ['all','selected'], true)
+    ? $mode
+    : 'all';
+
+  /* ----------------------------------------
+   * NEW: Allowed States Array
+   * ---------------------------------------- */
+
+  $allowed = isset($input['states_allowed'])
+    ? (array) $input['states_allowed']
+    : [];
+
+  $states = array_keys($this->us_states());
+
+  $allowed_clean = [];
+
+  foreach ($allowed as $abbr) {
+    $abbr = sanitize_text_field($abbr);
+    if (in_array($abbr, $states, true)) {
+      $allowed_clean[] = $abbr;
+    }
+  }
+
+  $out['states_allowed'] = array_values(array_unique($allowed_clean));
 
   return $out;
 }
@@ -82,6 +138,8 @@ $settings = wp_parse_args(get_option(self::OPTION_KEY, []), [
   'tenant_id'    => '',
   'api_key'      => '',
   'source_name'  => 'Website',
+  'state_mode'      => 'all',
+  'states_allowed'  => [],
 ]);
 
   $tenant_id   = esc_attr($settings['tenant_id']);
@@ -141,6 +199,104 @@ $source_name = esc_attr($settings['source_name']);
       Max 20 characters. Defaults to <strong>Website</strong> if left blank.
     </p>
   </td>
+
+</tr>
+
+<?php
+
+  $all_states = $this->us_states();
+$state_mode = $settings['state_mode'];
+$states_allowed = is_array($settings['states_allowed']) ? $settings['states_allowed'] : [];
+?>
+
+<tr>
+  <th scope="row">State Dropdown</th>
+  <td>
+    <fieldset>
+      <label style="display:block; margin-bottom:6px;">
+        <input type="radio"
+               name="<?php echo self::OPTION_KEY; ?>[state_mode]"
+               value="all"
+               <?php checked($state_mode, 'all'); ?> />
+        Show all states (This will show all 50 states in the dropdown for State)
+      </label>
+
+      <label style="display:block; margin-bottom:10px;">
+        <input type="radio"
+               name="<?php echo self::OPTION_KEY; ?>[state_mode]"
+               value="selected"
+               <?php checked($state_mode, 'selected'); ?> />
+        Only show selected states (This will show only the states you select in the dropdown for states)
+      </label>
+
+      <div id="ws68502_state_picker"
+           style="border:1px solid #dcdcde; background:#fff; padding:10px; border-radius:6px; max-width:760px;">
+        <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="button" id="ws68502_select_all_states">Select all</button>
+          <button type="button" class="button" id="ws68502_clear_all_states">Clear</button>
+          <span class="description">Pick the states you want available in the public form.</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(240px, 1fr)); gap:6px 18px;">
+          <?php foreach ($all_states as $abbr => $name): ?>
+            <label style="display:flex; gap:8px; align-items:center;">
+              <input type="checkbox"
+                     name="<?php echo self::OPTION_KEY; ?>[states_allowed][]"
+                     value="<?php echo esc_attr($abbr); ?>"
+                     <?php checked(in_array($abbr, $states_allowed, true)); ?> />
+              <span><?php echo esc_html($name . " ($abbr)"); ?></span>
+            </label>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <p class="description" style="margin-top:10px;">
+        Tip: If “Only show selected states” is chosen and none are selected, the dropdown will fall back to showing all states.
+      </p>
+    </fieldset>
+
+<script>
+  (function(){
+    const picker = document.getElementById('ws68502_state_picker');
+    const selectAllBtn = document.getElementById('ws68502_select_all_states');
+    const clearBtn = document.getElementById('ws68502_clear_all_states');
+
+    const modeAll = document.querySelector('input[name="<?php echo self::OPTION_KEY; ?>[state_mode]"][value="all"]');
+    const modeSelected = document.querySelector('input[name="<?php echo self::OPTION_KEY; ?>[state_mode]"][value="selected"]');
+
+    if (!picker) return;
+
+    function setAll(checked) {
+      picker.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = checked);
+    }
+
+    function setPickerEnabled(enabled) {
+      // Always visible, but "greyed out" when disabled
+      picker.style.opacity = enabled ? '1' : '0.45';
+      picker.style.filter = enabled ? 'none' : 'grayscale(1)';
+
+      // Disable/enable inputs inside picker
+      picker.querySelectorAll('input, button').forEach(el => {
+        el.disabled = !enabled;
+      });
+    }
+
+    function syncUI() {
+      const enabled = modeSelected && modeSelected.checked;
+      setPickerEnabled(!!enabled);
+    }
+
+    if (selectAllBtn) selectAllBtn.addEventListener('click', () => setAll(true));
+    if (clearBtn) clearBtn.addEventListener('click', () => setAll(false));
+
+    if (modeAll) modeAll.addEventListener('change', syncUI);
+    if (modeSelected) modeSelected.addEventListener('change', syncUI);
+
+    syncUI();
+  })();
+</script>
+  </td>
+
 </tr>
       </table>
 
@@ -213,22 +369,25 @@ $source_name = esc_attr($settings['source_name']);
   <select name="state" required>
     <option value="">Select State</option>
     <?php
-    $states = [
-      'AL'=>'Alabama','AK'=>'Alaska','AZ'=>'Arizona','AR'=>'Arkansas','CA'=>'California',
-      'CO'=>'Colorado','CT'=>'Connecticut','DE'=>'Delaware','FL'=>'Florida','GA'=>'Georgia',
-      'HI'=>'Hawaii','ID'=>'Idaho','IL'=>'Illinois','IN'=>'Indiana','IA'=>'Iowa',
-      'KS'=>'Kansas','KY'=>'Kentucky','LA'=>'Louisiana','ME'=>'Maine','MD'=>'Maryland',
-      'MA'=>'Massachusetts','MI'=>'Michigan','MN'=>'Minnesota','MS'=>'Mississippi','MO'=>'Missouri',
-      'MT'=>'Montana','NE'=>'Nebraska','NV'=>'Nevada','NH'=>'New Hampshire','NJ'=>'New Jersey',
-      'NM'=>'New Mexico','NY'=>'New York','NC'=>'North Carolina','ND'=>'North Dakota','OH'=>'Ohio',
-      'OK'=>'Oklahoma','OR'=>'Oregon','PA'=>'Pennsylvania','RI'=>'Rhode Island','SC'=>'South Carolina',
-      'SD'=>'South Dakota','TN'=>'Tennessee','TX'=>'Texas','UT'=>'Utah','VT'=>'Vermont',
-      'VA'=>'Virginia','WA'=>'Washington','WV'=>'West Virginia','WI'=>'Wisconsin','WY'=>'Wyoming'
-    ];
+$all_states = $this->us_states();
 
-    foreach ($states as $abbr => $name) {
-      echo '<option value="' . esc_attr($abbr) . '">' . esc_html($name) . ' (' . esc_html($abbr) . ')</option>';
-    }
+$settings = wp_parse_args(get_option(self::OPTION_KEY, []), [
+  'state_mode'     => 'all',
+  'states_allowed' => [],
+]);
+
+$states_allowed = is_array($settings['states_allowed']) ? $settings['states_allowed'] : [];
+$state_mode     = $settings['state_mode'];
+
+$states_to_show = $all_states;
+
+if ($state_mode === 'selected' && !empty($states_allowed)) {
+  $states_to_show = array_intersect_key($all_states, array_flip($states_allowed));
+}
+
+foreach ($states_to_show as $abbr => $name) {
+  echo '<option value="' . esc_attr($abbr) . '">' . esc_html($name) . ' (' . esc_html($abbr) . ')</option>';
+}
     ?>
   </select>
   <div class="ws68502-error" data-for="state"></div>
@@ -287,7 +446,7 @@ $source_name = esc_attr($settings['source_name']);
     if (!$enqueue) return;
 
     $plugin_url = plugin_dir_url(__FILE__);
-    $ver = '0.1.0';
+    $ver = WS68502_VERSION;
 
     wp_enqueue_style('ws68502-lead-form', $plugin_url . 'assets/form.css', [], $ver);
     wp_enqueue_script('ws68502-lead-form', $plugin_url . 'assets/form.js', [], $ver, true);
@@ -348,24 +507,46 @@ $data = [
   'birthdate' => sanitize_text_field($_POST['birthdate'] ?? ''),
 ];
 
-$valid_states = [
-  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
-  'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
-  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
-  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'
-];
+$all_states = array_keys($this->us_states());
+$valid_states = $all_states;
 
-if (!in_array($data['state'], $valid_states, true)) {
-  $errors['state'] = 'Invalid state selection';
+if (($settings['state_mode'] ?? 'all') === 'selected') {
+  $picked = isset($settings['states_allowed']) && is_array($settings['states_allowed'])
+    ? $settings['states_allowed']
+    : [];
+
+  if (!empty($picked)) {
+    $valid_states = array_values(array_intersect($all_states, $picked));
+  }
 }
+
 
   // Server-side validation
   $errors = [];
+
+
   foreach (['firstName','lastName','address1','city','state','zip','email','birthdate','phone'] as $k) {
 
     if (empty($data[$k])) $errors[$k] = 'Required';
   }
+
+  $all_states = array_keys($this->us_states());
+  $valid_states = $all_states;
+
+if (($settings['state_mode'] ?? 'all') === 'selected') {
+  $picked = isset($settings['states_allowed']) && is_array($settings['states_allowed'])
+    ? $settings['states_allowed']
+    : [];
+
+  if (!empty($picked)) {
+    $valid_states = array_values(array_intersect($all_states, $picked));
+  }
+}
+
+if (!empty($data['state']) && !in_array($data['state'], $valid_states, true)) {
+  $errors['state'] = 'Invalid state selection';
+}
+
   if (!empty($data['email']) && !is_email($data['email'])) $errors['email'] = 'Invalid email';
   if (!empty($data['state']) && strlen($data['state']) !== 2) $errors['state'] = 'Use 2-letter state code';
   if (!empty($data['zip']) && !preg_match('/^\d{5}(-\d{4})?$/', $data['zip'])) $errors['zip'] = 'Invalid ZIP';

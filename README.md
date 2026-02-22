@@ -153,27 +153,27 @@ Current Version: 0.1.0
 
 ## Future Enhancements
 
-1. **Configurable State Dropdown**
-   - Select which U.S. states appear in the dropdown
-   - Restrict submissions to approved states only
-   - Manage state availability via plugin settings
-
-2. **CAPTCHA / Human Verification Integration**
+1. **CAPTCHA / Human Verification Integration**
    - Native reCAPTCHA support (v2 or v3)
    - Easy API key configuration
    - Optional enable/disable toggle
    - Spam protection
 
-3. **Multiple Named Forms**
+2. **Multiple Named Forms**
    - Create multiple forms within the same WordPress site
    - Assign unique names
    - Generate individual shortcodes
 
-4. **Admin Leads Dashboard**
+3. **Admin Leads Dashboard**
    - Centralized list of submitted leads
    - Export to CSV
    - Lead status tracking
    - Search and filtering
+
+4. **Adding personal home and auto quotes to form**
+   - Add capability to the form to create a home/auto quote or both. 
+   - Add capability in the admin panel to add/remove desired fields.
+   - Reports on Leads based on criteria such as number of leads, LOB, SOLD or not SOLD, and imported not imported
 
    ## Licensing & Usage
 
