@@ -159,18 +159,13 @@ Current Version: 0.1.0
    - Optional enable/disable toggle
    - Spam protection
 
-2. **Multiple Named Forms**
-   - Create multiple forms within the same WordPress site
-   - Assign unique names
-   - Generate individual shortcodes
-
-3. **Admin Leads Dashboard**
+2. **Admin Leads Dashboard**
    - Centralized list of submitted leads
    - Export to CSV
    - Lead status tracking
    - Search and filtering
 
-4. **Adding personal home and auto quotes to form**
+3. **Adding personal home and auto quotes to form**
    - Add capability to the form to create a home/auto quote or both. 
    - Add capability in the admin panel to add/remove desired fields.
    - Reports on Leads based on criteria such as number of leads, LOB, SOLD or not SOLD, and imported not imported
